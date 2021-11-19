@@ -1,0 +1,41 @@
+{
+  "name": "generator-observables",
+  "version": "1.0.0",
+  "description": "Javascript Observables implemented with async generators",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -p config/tsconfig.json",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@babel/core": "^7.15.8",
+    "@types/node": "^12.0.0",
+    "@types/validator": "^13.6.3",
+    "@typescript-eslint/eslint-plugin": "^4.5.0",
+    "@typescript-eslint/parser": "^4.5.0",
+    "amqplib": "^0.8.0",
+    "babel-eslint": "^10.1.0",
+    "babel-jest": "^27.3.1",
+    "babel-loader": "8.1.0",
+    "commander": "^8.3.0",
+    "eslint": "^7.11.0",
+    "eslint-plugin-flowtype": "^5.2.0",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jest": "^24.1.0",
+    "eslint-plugin-testing-library": "^3.9.2",
+    "jest": "27.3.1",
+    "jest-circus": "^27.3.1",
+    "jest-resolve": "27.3.1",
+    "jest-watch-typeahead": "1.0.0",
+    "prettier": "^2.4.1",
+    "prompts": "2.4.0",
+    "resolve": "1.18.1",
+    "resolve-url-loader": "^3.1.2",
+    "semver": "7.3.2",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.2.3",
+    "url-loader": "4.1.1"
+  },
+  "author": "Felipe Lima",
+  "license": "ISC"
+}

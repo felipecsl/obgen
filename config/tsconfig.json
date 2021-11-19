@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "../build",
+    "target": "es2020",
+    "downlevelIteration": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strictNullChecks": true,
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "allowJs": true,
+    "lib": ["es2020"]
+  },
+  "include": ["../src/**/*"],
+  "exclude": ["node_modules", "../src/test/**/*"]
+}
