@@ -19,7 +19,27 @@ export default class Observable<T> {
     return new Observable({
       async next() {
         const next = await iterator.next();
-        return { value: mapFn(next.value) };
+        return { value: mapFn(next.value), done: next.done };
+      },
+    });
+  }
+
+  flatMap<O>(mapFn: (item: T) => Observable<O>): Observable<O> {
+    const { iterator } = this;
+    let innerIterator: AsyncIterator<O> | null;
+    return new Observable({
+      async next() {
+        if (!innerIterator) {
+          const next = await iterator.next();
+          innerIterator = mapFn(next.value).iterator;
+        }
+        const innerNext = await innerIterator.next();
+        if (innerNext.done) {
+          innerIterator = null;
+          return { value: innerNext.value, done: false };
+        } else {
+          return innerNext;
+        }
       },
     });
   }
@@ -74,7 +94,7 @@ export default class Observable<T> {
     let i = 0;
     return Observable.newInstance((stream) => {
       if (i < arr.length) {
-        stream.emit(arr[i++]);
+        stream.emit(arr[i++], i == arr.length);
       }
     });
   }

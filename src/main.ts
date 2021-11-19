@@ -2,11 +2,18 @@ import Observable from "./observable";
 import { times } from "lodash";
 
 (async () => {
-  const observable = testArray();
+  const observable = testFlatMap();
   for await (const date of observable.iterable()) {
     console.log(date);
   }
 })();
+
+function testFlatMap(): Observable<string> {
+  const arr = rangeTo(100);
+  return Observable.from(arr).flatMap((i) =>
+    Observable.from([`${i}`, `${i}-1`, `${i}-2`, `${i}-3`])
+  );
+}
 
 function testArray(): Observable<number> {
   const arr = rangeTo(100);
