@@ -1,5 +1,5 @@
 interface Stream<T> {
-  emit(val: T): any;
+  emit(val: T, done?: boolean): any;
 }
 
 export default class Observable<T> {
@@ -24,18 +24,58 @@ export default class Observable<T> {
     });
   }
 
-  /** Returns a new Observable */
+  /** Returns only the elements of the `Observable` for whom `filterFn` returns true */
+  filter(filterFn: (item: T) => boolean): Observable<T> {
+    const { iterator } = this;
+    return new Observable({
+      async next() {
+        let next = await iterator.next();
+        while (!filterFn(next.value)) {
+          next = await iterator.next();
+        }
+        return next;
+      },
+    });
+  }
+
+  /** Returns a new `Observable` that only yields the first `num` items */
+  take(num: number): Observable<T> {
+    const { iterator } = this;
+    let i = 0;
+    return new Observable({
+      async next() {
+        let next = await iterator.next();
+        if (i++ < num) {
+          return next;
+        } else {
+          return { done: true, value: next.value };
+        }
+      },
+    });
+  }
+
+  /** Returns a new `Observable` */
   static newInstance<T>(fn: (strem: Stream<T>) => any): Observable<T> {
     return new Observable({
       next() {
         return new Promise(async (resolve) => {
           fn({
-            emit(result: T) {
-              resolve({ value: result });
+            emit(value: T, done: boolean = false) {
+              resolve({ value, done });
             },
           });
         });
       },
+    });
+  }
+
+  /** Returns a new `Observable` that emits items from an input array */
+  static from<T>(arr: T[]): Observable<T> {
+    let i = 0;
+    return Observable.newInstance((stream) => {
+      if (i < arr.length) {
+        stream.emit(arr[i++]);
+      }
     });
   }
 
