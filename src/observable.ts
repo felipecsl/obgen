@@ -49,18 +49,28 @@ export default class Observable<T> {
   flatMap<O>(mapFn: (item: T) => Observable<O>): Observable<O> {
     const { iterator } = this;
     let innerIterator: AsyncIterator<O> | null;
+    let isDone = false;
     return new Observable({
       async next() {
         if (!innerIterator) {
-          const next = await iterator.next();
-          innerIterator = mapFn(next.value).iterator;
+          const { value, done } = await iterator.next();
+          isDone = done || false;
+          innerIterator = mapFn(value).iterator;
         }
-        const innerNext = await innerIterator.next();
-        if (innerNext.done) {
-          innerIterator = null;
-          return { value: innerNext.value, done: false };
+        if (isDone) {
+          return { value: null, done: true };
         } else {
-          return innerNext;
+          const { value, done } = await innerIterator.next();
+          if (done) {
+            // inner iterator is done, move outer next
+            const { value, done } = await iterator.next();
+            isDone = done || false;
+            innerIterator = mapFn(value).iterator;
+            const final = await innerIterator.next();
+            return { value: final.value, done: isDone };
+          } else {
+            return { value, done };
+          }
         }
       },
     });
@@ -96,14 +106,14 @@ export default class Observable<T> {
     });
   }
 
-  /** Creates a new stream that buffers events until they are consumed by the `Observer` */
+  /** Creates a new stream that buffers events until they are fully consumed by the `Observer` */
   static buffer<T>(createFn: (strem: Stream<T>) => any): Observable<T> {
     return new Observable(new BufferedIterator(createFn));
   }
 
   /**
-   * Creates a new observable that calls the provided `createFn` each time `next()` is called on the
-   * underlying stream.
+   * Creates a new `Observable` that calls the provided `createFn` each time `next()` is called on
+   * the underlying stream.
    */
   static create<T>(createFn: (stream: Stream<T>) => any): Observable<T> {
     return new Observable({
@@ -144,10 +154,13 @@ export default class Observable<T> {
     return Observable.from([val]);
   }
 
-  /** Returns a new AsyncIterable that emits one event every `interval` milliseconds */
+  /**
+   * Returns a new `Observable` that emits an infinite sequence of events on every `interval`
+   * milliseconds.
+   */
   static interval(interval: number): Observable<any> {
-    return Observable.create((stream) =>
-      setTimeout(() => stream.emit(null), interval)
+    return Observable.buffer((stream) =>
+      setInterval(() => stream.emit(null), interval)
     );
   }
 }

@@ -1,29 +1,31 @@
 import { Stream } from "./stream";
 
 class DelayedPromiseResolver {
-  private resolveFn: (_: any) => void;
+  private resolveFn: (_: any) => void = (_) => {};
   readonly resolver = (resolve: (_: any) => void) => {
+    // TODO: might need to handle concurrency here?
+    // multiple observers might overwrite each other here
     this.resolveFn = resolve;
   };
 
   resolve() {
-    this.resolveFn(null);
+    if (this.resolveFn) {
+      this.resolveFn(null);
+    }
   }
 }
 /**
  * An `AsyncIterator` implementation that buffers events until they are consumed.
- * Calling next() automatically waits until new events are available in the stream
+ * Calling next() automatically waits until new events are available in the stream.
+ *
  * TODO configure max capacity
  * TODO handle backpressure
  */
 export default class BufferedIterator<T, TReturn = any, TNext = undefined>
   implements AsyncIterator<T, TReturn, TNext>
 {
-  private bufferedResolver: DelayedPromiseResolver;
-  // TODO: Use a queue instead of array
+  private readonly bufferedResolver = new DelayedPromiseResolver();
   private readonly buffer: T[] = [];
-  // current cursor position in the buffer
-  private pos = 0;
   // Marks the end of the stream
   private ended = false;
 
@@ -32,8 +34,10 @@ export default class BufferedIterator<T, TReturn = any, TNext = undefined>
     const self = this;
     createFn({
       end() {
-        self.ended = true;
-        if (self.bufferedResolver) {
+        if (self.ended) {
+          throw new Error("Stream has already ended");
+        } else {
+          self.ended = true;
           self.bufferedResolver.resolve();
         }
       },
@@ -45,43 +49,46 @@ export default class BufferedIterator<T, TReturn = any, TNext = undefined>
         } else {
           buffer.push(value);
         }
-        if (self.bufferedResolver) {
-          self.bufferedResolver.resolve();
-        }
+        self.bufferedResolver.resolve();
       },
     });
   }
 
   async waitForIncomingItems() {
-    // lock until an event is emitted
-    if (!this.bufferedResolver) {
-      this.bufferedResolver = new DelayedPromiseResolver();
-    }
-    // await on promise resolver
+    // lock until an event is emitted by awaiting on promise resolver
     await new Promise(this.bufferedResolver.resolver);
+  }
+
+  private endStream(resolve: (_: any) => void) {
+    resolve({ value: 0 as any, done: true });
+  }
+
+  private emit(resolve: (_: any) => void) {
+    resolve({ value: this.buffer.shift() as T });
   }
 
   next(...args: [] | [TNext]): Promise<IteratorResult<T, TReturn>> {
     return new Promise(async (resolve) => {
-      const { pos, buffer, ended } = this;
-      if (pos === buffer.length) {
+      const { buffer, ended } = this;
+      if (buffer.length === 0) {
         // buffer is drained
         if (ended) {
           // stream has been fully consumed and ended, mark stream as done
-          resolve({ value: 0 as any, done: true });
+          this.endStream(resolve);
         } else {
           // lock until a new event is emitted
           await this.waitForIncomingItems();
           // resolver lock was acquired
           // the stream may have ended while we were waiting, so we check that again below
+          // TODO: Wrap in a critical session
           if (this.ended) {
-            resolve({ value: 0 as any, done: true });
+            this.endStream(resolve);
           } else {
-            resolve({ value: buffer[this.pos++] });
+            this.emit(resolve);
           }
         }
       } else {
-        resolve({ value: buffer[this.pos++] });
+        this.emit(resolve);
       }
     });
   }
