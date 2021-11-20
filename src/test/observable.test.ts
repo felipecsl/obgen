@@ -1,5 +1,4 @@
 import Observable from "../observable";
-import { Stream } from "../stream";
 import { times } from "lodash";
 
 describe("Observable", () => {
@@ -14,6 +13,15 @@ describe("Observable", () => {
           stream.end();
         });
         expect(await observable.toArray()).toEqual([1, 2, 3, 4]);
+      });
+
+      it("emits new items as they become available", async () => {
+        const observable = Observable.buffer((stream) => {
+          // delay emission for a few milliseconds so that it happens after we subscribe
+          times(5, (i) => setTimeout(() => stream.emit(i), i * 100));
+          setTimeout(() => stream.end(), 600);
+        });
+        expect(await observable.toArray()).toEqual([0, 1, 2, 3, 4]);
       });
     });
   });
