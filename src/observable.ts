@@ -1,6 +1,7 @@
-interface Stream<T> {
-  emit(val: T, done?: boolean): any;
-}
+import BufferedIterator from "./bufferedIterator";
+import { Stream } from "./stream";
+
+type Observer<T> = (item: T) => any;
 
 export default class Observable<T> {
   constructor(private readonly iterator: AsyncIterator<T>) {}
@@ -18,7 +19,7 @@ export default class Observable<T> {
    * Subscribes to events emitted by this `Observable`, calling the provided `observer` function
    * whenever a new item is available.
    */
-  async subscribe(observer: (item: T) => any) {
+  async subscribe(observer: Observer<T>) {
     for await (const element of this.iterable()) {
       observer(element);
     }
@@ -95,8 +96,16 @@ export default class Observable<T> {
     });
   }
 
-  /** Returns a new `Observable` that calls the provided `createFn` to emit events */
-  static create<T>(createFn: (strem: Stream<T>) => any): Observable<T> {
+  /** Creates a new stream that buffers events until they are consumed by the `Observer` */
+  static buffer<T>(createFn: (strem: Stream<T>) => any): Observable<T> {
+    return new Observable(new BufferedIterator(createFn));
+  }
+
+  /**
+   * Creates a new observable that calls the provided `createFn` each time `next()` is called on the
+   * underlying stream.
+   */
+  static create<T>(createFn: (stream: Stream<T>) => any): Observable<T> {
     return new Observable({
       next() {
         return new Promise(async (resolve) => {
@@ -104,10 +113,19 @@ export default class Observable<T> {
             emit(value: T, done: boolean = false) {
               resolve({ value, done });
             },
+
+            end() {
+              resolve({ value: null, done: true });
+            },
           });
         });
       },
     });
+  }
+
+  /** Returns a new `Observable` that calls the provided `createFn` to emit events */
+  static wrap<T>(createFn: () => any): Observable<T> {
+    return new Observable(createFn());
   }
 
   /** Returns a new `Observable` that emits items from an input array */
@@ -117,7 +135,7 @@ export default class Observable<T> {
       if (i < arr.length) {
         stream.emit(arr[i++]);
       } else {
-        stream.emit(null, true);
+        stream.end();
       }
     });
   }
