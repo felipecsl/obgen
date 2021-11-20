@@ -2,10 +2,8 @@ import Observable from "./observable";
 import { times } from "lodash";
 
 (async () => {
-  const observable = testFlatMap();
-  for await (const date of observable.iterable()) {
-    console.log(date);
-  }
+  const observable = testTimestamp();
+  observable.subscribe(console.log);
 })();
 
 function testFlatMap(): Observable<string> {

@@ -14,6 +14,27 @@ export default class Observable<T> {
     };
   }
 
+  /**
+   * Subscribes to events emitted by this `Observable`, calling the provided `observer` function
+   * whenever a new item is available.
+   */
+  async subscribe(observer: (item: T) => any) {
+    for await (const element of this.iterable()) {
+      observer(element);
+    }
+  }
+
+  /**
+   * Collects all items emitted by this `Observable` and returns once a terminal event has been
+   * received. Be careful as calling this method on an "infinite" `Observable` will never yield any
+   * data.
+   */
+  async toArray(): Promise<T[]> {
+    const ret: T[] = [];
+    await this.subscribe((i) => ret.push(i));
+    return ret;
+  }
+
   map<O>(mapFn: (item: T) => O): Observable<O> {
     const { iterator } = this;
     return new Observable({
@@ -74,12 +95,12 @@ export default class Observable<T> {
     });
   }
 
-  /** Returns a new `Observable` */
-  static newInstance<T>(fn: (strem: Stream<T>) => any): Observable<T> {
+  /** Returns a new `Observable` that calls the provided `createFn` to emit events */
+  static create<T>(createFn: (strem: Stream<T>) => any): Observable<T> {
     return new Observable({
       next() {
         return new Promise(async (resolve) => {
-          fn({
+          createFn({
             emit(value: T, done: boolean = false) {
               resolve({ value, done });
             },
@@ -92,16 +113,22 @@ export default class Observable<T> {
   /** Returns a new `Observable` that emits items from an input array */
   static from<T>(arr: T[]): Observable<T> {
     let i = 0;
-    return Observable.newInstance((stream) => {
+    return Observable.create((stream) => {
       if (i < arr.length) {
-        stream.emit(arr[i++], i == arr.length);
+        stream.emit(arr[i++]);
+      } else {
+        stream.emit(null, true);
       }
     });
   }
 
+  static just<T>(val: T): Observable<T> {
+    return Observable.from([val]);
+  }
+
   /** Returns a new AsyncIterable that emits one event every `interval` milliseconds */
   static interval(interval: number): Observable<any> {
-    return Observable.newInstance((stream) =>
+    return Observable.create((stream) =>
       setTimeout(() => stream.emit(null), interval)
     );
   }

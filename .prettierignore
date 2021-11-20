@@ -1,0 +1,10 @@
+# Ignore artifacts:
+build
+coverage
+public
+config/*.js
+tmp
+resources
+vendor
+CHANGELOG.md
+docker-compose.yml
