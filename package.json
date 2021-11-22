@@ -1,6 +1,6 @@
 {
   "name": "obgen",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Javascript Observables implemented with async generators",
   "main": "dist/observable.js",
   "types": "dist/observable.d.ts",
@@ -48,7 +48,7 @@
     "url": "git+https://github.com/felipecsl/obgen.git"
   },
   "type": "module",
-  "exports": "./observable.ts",
+  "exports": "./src/observable.ts",
   "engines": {
     "node": "^12.20.0 || ^14.13.1 || >=16.0.0"
   },
