@@ -48,7 +48,7 @@
     "url": "git+https://github.com/felipecsl/obgen.git"
   },
   "type": "module",
-  "exports": "./src/observable.ts",
+  "exports": "./dist/observable.js",
   "engines": {
     "node": "^12.20.0 || ^14.13.1 || >=16.0.0"
   },
