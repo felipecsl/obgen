@@ -2,6 +2,20 @@
 
 Observable (reactive streams) pattern implemented using es2015 [async generators](https://tc39.es/proposal-async-iteration/).
 
+## Installation
+
+Using yarn:
+
+```bash
+yarn add obgen
+```
+
+or using npm:
+
+```bash
+npm i --save lodash
+```
+
 ## Usage
 
 Observables are lazy streams of data that emit items asynchronously. They may be infinite or include an optional terminal event to signal the end of the stream. You can `map`, `filter`, etc.:
