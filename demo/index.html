@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Obgen demo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+  </head>
+
+  <body>
+    <nav>
+      <h1 class="logo">Obgen demo</h1>
+    </nav>
+    <section class="content">
+      <h2>Wave parameters</h2>
+      <label for="sped">Speed</label>
+      <input type="range" id="speed" min="1" max="5" value="2" />
+      <br />
+      <label for="width">Line width</label>
+      <input type="range" id="line_width" min="1" max="5" value="1" />
+      <br />
+      <label for="width">Wave length</label>
+      <input type="range" id="width" min="1" max="20" value="4" />
+      <br />
+      <label for="amplitude">Amplitude</label>
+      <input type="range" id="amplitude" min="0" max="150" value="50" />
+      <br />
+      <canvas
+        id="canvas"
+        width="800"
+        height="600"
+        style="border: 1px solid gray; margin-top: 20px"
+      />
+    </section>
+  </body>
+  <script>
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+    const amplitudeInput = document.getElementById("amplitude");
+    const waveLengthInput = document.getElementById("width");
+    const lineWidthInput = document.getElementById("line_width");
+    const speedInput = document.getElementById("speed");
+    let amplitude = +amplitudeInput.value;
+    let waveLength = waveLengthInput.value;
+    let speed = speedInput.value;
+    let lineWidth = lineWidthInput.value;
+
+    lineWidthInput.addEventListener("change", function (e) {
+      lineWidth = e.currentTarget.value;
+      render();
+    });
+
+    waveLengthInput.addEventListener("change", function (e) {
+      waveLength = e.currentTarget.value;
+      render();
+    });
+
+    speedInput.addEventListener("change", function (e) {
+      speed = e.currentTarget.value;
+      render();
+    });
+
+    amplitudeInput.addEventListener("change", function (e) {
+      amplitude = e.currentTarget.value;
+      render();
+    });
+
+    let i = 0;
+    const delay = 16;
+    setInterval(function () {
+      i += delay;
+      render(i);
+    }, 16);
+
+    function render(xOffset) {
+      const canvasWidth = 1000;
+      const canvasHeight = 600;
+      const width = canvasWidth + xOffset;
+      context.strokeStyle = "rgb(110, 110, 110)";
+      context.lineWidth = lineWidth;
+      context.clearRect(0, 0, canvasWidth, canvasHeight);
+      context.beginPath();
+      const yOffset = canvasHeight / 2;
+      for (let i = 0; i < width; i++) {
+        context.lineTo(
+          i * waveLength - (xOffset / 5) * speed,
+          yOffset + Math.sin(i / 10) * amplitude
+        );
+      }
+      context.stroke();
+    }
+  </script>
+</html>
