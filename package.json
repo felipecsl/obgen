@@ -8,7 +8,7 @@
     "prepublish": "tsc -p config/tsconfig.json",
     "build": "tsc -p config/tsconfig.json",
     "check_prettier": "prettier --check .",
-    "test": "yarn run jest"
+    "ci": "yarn check_prettier && yarn build && yarn test"
   },
   "devDependencies": {
     "@babel/core": "^7.15.8",
