@@ -1,5 +1,6 @@
 import BufferedIterator from "./bufferedIterator";
 import { Stream } from "./stream";
+import iteratorToIterable from "./util";
 
 type Observer<T> = (item: T) => any;
 
@@ -8,11 +9,7 @@ export default class Observable<T> {
 
   iterable(): AsyncIterable<T> {
     const { iterator } = this;
-    return {
-      [Symbol.asyncIterator]() {
-        return iterator;
-      },
-    };
+    return iteratorToIterable(iterator);
   }
 
   /**
@@ -36,6 +33,11 @@ export default class Observable<T> {
     return ret;
   }
 
+  /**
+   * Calls the provided `mapFn` function on each element of this `Observable` and returns a new
+   * `Observable` that emits the result of transforming each element of the input with the provided
+   * function.
+   */
   map<O>(mapFn: (item: T) => O): Observable<O> {
     const { iterator } = this;
     return new Observable({
@@ -44,6 +46,31 @@ export default class Observable<T> {
         return { value: mapFn(next.value), done: next.done };
       },
     });
+  }
+
+  /**
+   * Calls the provided async `mapFn` function on each element of this `Observable` and returns a new
+   * `Observable` that emits the result of transforming each element of the input with the resolved
+   * value from the `Promise` returned by `mapFn` function.
+   */
+  asyncMap<O>(mapFn: (item: T) => Promise<O>): Observable<O> {
+    const { iterator } = this;
+    return new Observable({
+      async next() {
+        const next = await iterator.next();
+        return { value: await mapFn(next.value), done: next.done };
+      },
+    });
+  }
+
+  /**
+   * Merges this `Observable` with the provided `other` `Observable` by joining both streams into a
+   * new single`Observable` which is returned by this function.
+   */
+  merge(other: Observable<T>): Observable<T> {
+    return new Observable(
+      BufferedIterator.from(this.iterable(), other.iterable())
+    );
   }
 
   flatMap<O>(mapFn: (item: T) => Observable<O>): Observable<O> {
@@ -107,19 +134,19 @@ export default class Observable<T> {
   }
 
   /** Creates a new stream that buffers events until they are fully consumed by the `Observer` */
-  static buffer<T>(createFn: (strem: Stream<T>) => any): Observable<T> {
-    return new Observable(new BufferedIterator(createFn));
+  static buffer<T>(onSubscribe: (strem: Stream<T>) => any): Observable<T> {
+    return new Observable(new BufferedIterator(onSubscribe));
   }
 
   /**
-   * Creates a new `Observable` that calls the provided `createFn` each time `next()` is called on
-   * the underlying stream.
+   * Creates a new `Observable` that calls the provided `onSubscribe` **each time** `next()` is
+   * called on the underlying `AsyncIterator`.
    */
-  static create<T>(createFn: (stream: Stream<T>) => any): Observable<T> {
+  static create<T>(onSubscribe: (stream: Stream<T>) => any): Observable<T> {
     return new Observable({
       next() {
         return new Promise(async (resolve) => {
-          createFn({
+          onSubscribe({
             emit(value: T, done: boolean = false) {
               resolve({ value, done });
             },
@@ -133,12 +160,12 @@ export default class Observable<T> {
     });
   }
 
-  /** Returns a new `Observable` that calls the provided `createFn` to emit events */
-  static wrap<T>(createFn: () => any): Observable<T> {
-    return new Observable(createFn());
+  /** Returns a new `Observable` that calls the provided `onSubscribe` to emit events */
+  static wrap<T>(onSubscribe: () => any): Observable<T> {
+    return new Observable(onSubscribe());
   }
 
-  /** Returns a new `Observable` that emits items from an input array */
+  /** Returns a new `Observable` that, upon subscription, emits items from the input `arr` array */
   static from<T>(arr: T[]): Observable<T> {
     let i = 0;
     return Observable.create((stream) => {
@@ -150,6 +177,39 @@ export default class Observable<T> {
     });
   }
 
+  /**
+   * Constructs an `Observable` from a `Promise` by immediately resolving the provided `promiseFn`
+   * function.
+   */
+  static async promise<T>(promiseFn: () => Promise<T>): Promise<Observable<T>> {
+    return Observable.just(await promiseFn());
+  }
+
+  /**
+   * Constructs an `Observable` that defers resolution of the provided `promiseFn` until the
+   * `Observable` is subscribed to (eg.: `subscribe()` or `toArray()` called).
+   */
+  static defer<T>(promiseFn: () => Promise<T>): Observable<T> {
+    let done = false;
+    return new Observable({
+      next() {
+        return new Promise(async (resolve) => {
+          if (!done) {
+            const value = await promiseFn();
+            resolve({ value, done });
+            done = true;
+          } else {
+            resolve({ value: null, done });
+          }
+        });
+      },
+    });
+  }
+
+  /**
+   * Creates an `Observable` that, upon subscription, emits the provided value `val` and ends
+   * immediately.
+   * */
   static just<T>(val: T): Observable<T> {
     return Observable.from([val]);
   }

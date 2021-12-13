@@ -1,33 +1,5 @@
+import { DeferredPromiseResolver } from "./deferredPromiseResolver";
 import { Stream } from "./stream";
-
-type DeferredPromise = {
-  promise?: Promise<any>;
-  resolve?: (value: any) => void;
-  reject?: (reason?: any) => void;
-};
-
-class DeferredPromiseResolver {
-  private readonly deferred: DeferredPromise = {};
-
-  constructor() {
-    this.deferred.promise = new Promise((resolve, reject) => {
-      this.deferred.resolve = resolve;
-      this.deferred.reject = reject;
-    });
-  }
-
-  resolve(): void {
-    this.deferred.resolve!(null);
-  }
-
-  reject(reason?: any): void {
-    this.deferred.reject!(reason);
-  }
-
-  promise(): Promise<any> {
-    return this.deferred.promise!;
-  }
-}
 
 /**
  * An `AsyncIterator` implementation that buffers events until they are consumed.
@@ -39,15 +11,29 @@ class DeferredPromiseResolver {
 export default class BufferedIterator<T, TReturn = any, TNext = undefined>
   implements AsyncIterator<T, TReturn, TNext>
 {
-  private readonly deferredPromises: DeferredPromiseResolver[] = [];
+  private readonly deferredPromises: DeferredPromiseResolver<T>[] = [];
   private readonly buffer: T[] = [];
   // Marks the end of the stream
   private ended = false;
 
-  constructor(createFn: (strem: Stream<T>) => any) {
+  /** Constructs a new `BufferedIterator` from the provided `AsyncIterable`(s) */
+  static from<T>(...iterables: AsyncIterable<T>[]): BufferedIterator<T> {
+    return new BufferedIterator(async (stream) => {
+      await Promise.all(
+        iterables.map(async (iterable) => {
+          for await (const item of iterable) {
+            stream.emit(item);
+          }
+        })
+      );
+      stream.end();
+    });
+  }
+
+  constructor(onCreate: (strem: Stream<T>) => any) {
     const { buffer, ended } = this;
     const self = this;
-    createFn({
+    onCreate({
       end() {
         if (self.ended) {
           throw new Error("Stream has already ended");
@@ -69,16 +55,19 @@ export default class BufferedIterator<T, TReturn = any, TNext = undefined>
     });
   }
 
-  async waitForIncomingItems() {
+  private async waitForIncomingItems() {
     // lock until an event is emitted by awaiting on promise resolver
-    const deferredPromise = new DeferredPromiseResolver();
-    this.deferredPromises.push(deferredPromise);
+    const { deferredPromises } = this;
+    const deferredPromise = new DeferredPromiseResolver<T>();
+    deferredPromises.push(deferredPromise);
     await deferredPromise.promise();
   }
 
   private resolvePromises() {
-    while (this.deferredPromises.length > 0) {
-      this.deferredPromises.shift()!.resolve();
+    // TODO: wrap in a critical section
+    const { deferredPromises } = this;
+    while (deferredPromises.length > 0) {
+      deferredPromises.shift()!.resolve(null);
     }
   }
 
@@ -87,7 +76,7 @@ export default class BufferedIterator<T, TReturn = any, TNext = undefined>
   }
 
   private emit(resolve: (_: any) => void) {
-    resolve({ value: this.buffer.shift() as T });
+    resolve({ value: this.buffer.shift() });
   }
 
   next(..._: [] | [TNext]): Promise<IteratorResult<T, TReturn>> {

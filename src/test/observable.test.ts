@@ -25,6 +25,54 @@ describe("Observable", () => {
       });
     });
   });
+  describe("#map", () => {
+    it("should multiply items in the input array", async () => {
+      const observable = Observable.from([1, 2, 3]).map((i) => i * 2);
+      expect(await observable.toArray()).toEqual([2, 4, 6]);
+    });
+  });
+  describe("#asyncMap", () => {
+    it("should multiply items in the input array", async () => {
+      const observable = Observable.from([1, 2, 3]).asyncMap((i) =>
+        Promise.resolve(i * 3)
+      );
+      expect(await observable.toArray()).toEqual([3, 6, 9]);
+    });
+  });
+  // TODO test rejections
+  describe("#merge", () => {
+    it("should join multiple observables", async () => {
+      const observable = Observable.from([0, 1, 2, 3, 4, 5]).merge(
+        Observable.from([6, 7, 8, 9])
+      );
+      const actual = await observable.toArray();
+      // items are expected to be emitted out of order, so we sort them here
+      expect(actual.sort()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    });
+  });
+  describe("#promise", () => {
+    it("should resolve promise to Observable", async () => {
+      const arr = [1];
+      const observable = await Observable.promise(() =>
+        Promise.resolve([...arr])
+      );
+      // item 2 should not be included in the output because the promise was already resolved
+      arr.push(2);
+      // we expect a nested array because its an Observable<number[]> thus toArray() yields number[][]
+      expect(await observable.toArray()).toEqual([[1]]);
+    });
+  });
+  describe("#defer", () => {
+    it("should resolve promise upon subscription", async () => {
+      const arr = [1];
+      const observable = Observable.defer(() => Promise.resolve([...arr]));
+      // item 2 should be included in the output because the Promise is only resolved once `toArray()`
+      // is called
+      arr.push(2);
+      // we expect a nested array because its an Observable<number[]> thus toArray() yields number[][]
+      expect(await observable.toArray()).toEqual([[1, 2]]);
+    });
+  });
   describe("#wrap", () => {
     describe("#toArray", () => {
       it("emits items", async () => {
