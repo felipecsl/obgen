@@ -4,6 +4,7 @@ import Observable from "./observable";
   testArray().subscribe(console.log);
 })();
 
+// @ts-ignore
 function testFlatMap(items: number = 100): Observable<string> {
   const arr = rangeTo(items);
   return Observable.from(arr).flatMap((i) =>
@@ -19,6 +20,7 @@ function testArray(items: number = 100): Observable<number> {
     .take(10);
 }
 
+// @ts-ignore
 function testInterval(intervalMs: number = 1000): Observable<string> {
   return Observable.interval(intervalMs)
     .map((_) => new Date().getTime())
