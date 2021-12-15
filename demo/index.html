@@ -15,17 +15,17 @@
       <input type="range" id="speed" min="1" max="5" value="2" />
       <br />
       <label for="width">Line width</label>
-      <input type="range" id="line_width" min="1" max="5" value="1" />
+      <input type="range" id="line_width" min="1" max="5" value="3" />
       <br />
       <label for="width">Wave length</label>
-      <input type="range" id="width" min="1" max="20" value="4" />
+      <input type="range" id="width" min="1" max="20" value="10" />
       <br />
       <label for="amplitude">Amplitude</label>
       <input type="range" id="amplitude" min="0" max="150" value="50" />
       <br />
       <canvas
         id="canvas"
-        width="800"
+        width="1000"
         height="600"
         style="border: 1px solid gray; margin-top: 20px"
       />
@@ -38,51 +38,59 @@
     const waveLengthInput = document.getElementById("width");
     const lineWidthInput = document.getElementById("line_width");
     const speedInput = document.getElementById("speed");
+    const canvasWidth = 1000;
+    const canvasHeight = 600;
+    const yOffset = canvasHeight / 2;
     let amplitude = +amplitudeInput.value;
     let waveLength = waveLengthInput.value;
     let speed = speedInput.value;
     let lineWidth = lineWidthInput.value;
-
+    let xOffset = 0;
     lineWidthInput.addEventListener("change", function (e) {
       lineWidth = e.currentTarget.value;
-      render();
+      renderSin();
     });
-
     waveLengthInput.addEventListener("change", function (e) {
       waveLength = e.currentTarget.value;
-      render();
+      renderSin();
     });
-
     speedInput.addEventListener("change", function (e) {
       speed = e.currentTarget.value;
-      render();
+      renderSin();
     });
-
     amplitudeInput.addEventListener("change", function (e) {
       amplitude = e.currentTarget.value;
-      render();
+      renderSin();
     });
 
-    let i = 0;
-    const delay = 16;
+    const frameDelay = 16.6;
     setInterval(function () {
-      i += delay;
-      render(i);
-    }, 16);
+      xOffset += frameDelay;
+      renderSin();
+    }, frameDelay);
 
-    function render(xOffset) {
-      const canvasWidth = 1000;
-      const canvasHeight = 600;
+    function renderSin() {
+      render(function (i) {
+        return Math.sin(i / 10);
+      });
+    }
+
+    function renderCos() {
+      render(function (i) {
+        return Math.cos(i / 10);
+      });
+    }
+
+    function render(yFn) {
       const width = canvasWidth + xOffset;
       context.strokeStyle = "rgb(110, 110, 110)";
       context.lineWidth = lineWidth;
       context.clearRect(0, 0, canvasWidth, canvasHeight);
       context.beginPath();
-      const yOffset = canvasHeight / 2;
       for (let i = 0; i < width; i++) {
         context.lineTo(
           i * waveLength - (xOffset / 5) * speed,
-          yOffset + Math.sin(i / 10) * amplitude
+          yOffset + yFn(i) * amplitude
         );
       }
       context.stroke();

@@ -21,6 +21,8 @@ npm i --save lodash
 Observables are lazy streams of data that emit items asynchronously. They may be infinite or include an optional terminal event to signal the end of the stream. You can `map`, `filter`, etc.:
 
 ```typescript
+import Observable from "obgen";
+
 const arr = [...Array(num).keys()].map((_, i) => i);
 const observable = Observable.from(arr)
   .map((i) => i * 2)
@@ -28,7 +30,7 @@ const observable = Observable.from(arr)
   .take(10);
 ```
 
-Observables are lazily evaluated. Items are not collected until you subscribe to them:
+`Observable`s are lazily evaluated. Items are not collected until you subscribe to them:
 
 ```typescript
 observable.subscribe(console.log);
