@@ -206,6 +206,11 @@ export default class Observable<T> {
     });
   }
 
+  /** Returns a new empty `Observable`, which emits no items and ends immediately. */
+  static empty<T>(): Observable<T> {
+    return Observable.create((stream) => stream.end());
+  }
+
   /**
    * Creates an `Observable` that, upon subscription, emits the provided value `val` and ends
    * immediately.

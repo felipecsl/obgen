@@ -1,6 +1,6 @@
 {
   "name": "obgen",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Javascript Observables implemented with async generators",
   "main": "dist/observable.js",
   "types": "dist/observable.d.ts",

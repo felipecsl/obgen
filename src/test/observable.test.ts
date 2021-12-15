@@ -62,6 +62,12 @@ describe("Observable", () => {
       expect(await observable.toArray()).toEqual([[1]]);
     });
   });
+  describe("#empyt", () => {
+    it("should emit no items", async () => {
+      const observable = Observable.empty();
+      expect(await observable.toArray()).toEqual([]);
+    });
+  });
   describe("#defer", () => {
     it("should resolve promise upon subscription", async () => {
       const arr = [1];
