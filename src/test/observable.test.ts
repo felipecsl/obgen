@@ -129,6 +129,15 @@ describe("Observable", () => {
       });
     });
   });
+  describe("observer", () => {
+    it("should call onNext and onComplete", async () => {
+      const observable = Observable.just("hello world");
+      const mock = { onNext: jest.fn(), onComplete: jest.fn() };
+      await observable.subscribe(mock);
+      expect(mock.onNext).toHaveBeenCalledWith("hello world");
+      expect(mock.onComplete).toHaveBeenCalledTimes(1);
+    });
+  });
   describe("#filter", () => {
     it("should remove odd numbers", async () => {
       const observable = Observable.from([1, 2, 3, 4, 5, 6, 7, 8, 9]).filter(

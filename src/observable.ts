@@ -2,7 +2,15 @@ import BufferedIterator from "./bufferedIterator";
 import { Stream } from "./stream";
 import iteratorToIterable from "./util";
 
-type Observer<T> = (item: T) => any;
+type Observer<T> = {
+  onNext: (item: T) => any;
+  onComplete?: () => any;
+  // TODO: add onError callback
+};
+
+function isObserver(observer: any): observer is Observer<any> {
+  return typeof observer.onNext === "function";
+}
 
 export default class Observable<T> {
   constructor(private readonly iterator: AsyncIterator<T>) {}
@@ -16,9 +24,17 @@ export default class Observable<T> {
    * Subscribes to events emitted by this `Observable`, calling the provided `observer` function
    * whenever a new item is available.
    */
-  async subscribe(observer: Observer<T>) {
+  async subscribe(observer: Observer<T> | ((item: T) => any)) {
     for await (const element of this.iterable()) {
-      observer(element);
+      if (isObserver(observer)) {
+        observer.onNext(element);
+      } else {
+        // @ts-ignore
+        observer(element);
+      }
+    }
+    if (isObserver(observer) && observer.onComplete) {
+      observer.onComplete();
     }
   }
 
@@ -29,7 +45,7 @@ export default class Observable<T> {
    */
   async toArray(): Promise<T[]> {
     const ret: T[] = [];
-    await this.subscribe((i) => ret.push(i));
+    await this.subscribe({ onNext: (i: T) => ret.push(i) });
     return ret;
   }
 
