@@ -95,40 +95,21 @@ export default class Observable<T> {
     let isDone = false;
     return new Observable({
       async next() {
-        if (!innerIterator) {
+        let innerValue = null;
+        let innerDone = true;
+        while (innerDone) {
           const { value, done } = await iterator.next();
           isDone = done || false;
-          innerIterator = mapFn(value).iterator;
-        }
-        if (isDone) {
-          return { value: null, done: true };
-        } else {
-          const { value: innerValue, done: innerDone } =
-            await innerIterator.next();
-          if (!innerDone) {
-            console.log("innerNotDone");
-            return { value: innerValue, done: innerDone };
+          if (isDone) {
+            return { value: null, done: true };
           } else {
-            console.log("innerDone");
-            let innerValue = null;
-            let innerDone = true;
-            while (innerDone) {
-              // inner iterator is done, move outer iterator next
-              const { value, done } = await iterator.next();
-              isDone = done || false;
-              if (isDone) {
-                return { value: null, done: true };
-              } else {
-                innerIterator = mapFn(value).iterator;
-                const final = await innerIterator.next();
-                innerValue = final.value;
-                innerDone = final.done;
-              }
-            }
-            console.log(`innerValue=${innerValue}, innerDone=${innerDone}`);
-            return { value: innerValue, done: innerDone };
+            innerIterator = mapFn(value).iterator;
+            const final = await innerIterator.next();
+            innerValue = final.value;
+            innerDone = final.done;
           }
         }
+        return { value: innerValue, done: innerDone };
       },
     });
   }
