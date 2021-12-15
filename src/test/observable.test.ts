@@ -31,6 +31,32 @@ describe("Observable", () => {
       expect(await observable.toArray()).toEqual([2, 4, 6]);
     });
   });
+  describe("#flatMap", () => {
+    it("should multiply items in the input array", async () => {
+      const observable = Observable.from([1, 2, 3]).flatMap((i) =>
+        Observable.just(i * 2)
+      );
+      expect(await observable.toArray()).toEqual([2, 4, 6]);
+    });
+    it("should not emit empty odd items", async () => {
+      const observable = Observable.from([1, 2, 3, 4, 5, 6, 7, 8, 9]).flatMap(
+        (i) => (i % 2 === 0 ? Observable.just(i) : Observable.empty())
+      );
+      expect(await observable.toArray()).toEqual([2, 4, 6, 8]);
+    });
+    it("should not emit empty even items", async () => {
+      const observable = Observable.from([1, 2, 3, 4, 5, 6, 7, 8, 9]).flatMap(
+        (i) => (i % 2 !== 0 ? Observable.just(i) : Observable.empty())
+      );
+      expect(await observable.toArray()).toEqual([1, 3, 5, 7, 9]);
+    });
+    it("should emit empty array", async () => {
+      const observable = Observable.from([1, 2, 3, 4, 5, 6, 7, 8, 9]).flatMap(
+        (_) => Observable.empty()
+      );
+      expect(await observable.toArray()).toEqual([]);
+    });
+  });
   describe("#asyncMap", () => {
     it("should multiply items in the input array", async () => {
       const observable = Observable.from([1, 2, 3]).asyncMap((i) =>
