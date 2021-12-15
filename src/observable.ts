@@ -103,16 +103,37 @@ export default class Observable<T> {
     });
   }
 
+  /**
+   * Returns only the elements of the `Observable` for whom the `Promise` returned from `filterFn`
+   * resolves to `true`
+   */
+  asyncFilter(filterFn: (item: T) => Promise<boolean>): Observable<T> {
+    const { iterator } = this;
+    return new Observable({
+      async next() {
+        let { value, done } = await iterator.next();
+        while (!done && !(await filterFn(value))) {
+          const next = await iterator.next();
+          value = next.value;
+          done = next.done;
+        }
+        return { value, done };
+      },
+    });
+  }
+
   /** Returns only the elements of the `Observable` for whom `filterFn` returns true */
   filter(filterFn: (item: T) => boolean): Observable<T> {
     const { iterator } = this;
     return new Observable({
       async next() {
-        let next = await iterator.next();
-        while (!filterFn(next.value)) {
-          next = await iterator.next();
+        let { value, done } = await iterator.next();
+        while (!done && !filterFn(value)) {
+          const next = await iterator.next();
+          value = next.value;
+          done = next.done;
         }
-        return next;
+        return { value, done };
       },
     });
   }

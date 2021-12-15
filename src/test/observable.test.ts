@@ -49,6 +49,13 @@ describe("Observable", () => {
       // items are expected to be emitted out of order, so we sort them here
       expect(actual.sort()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     });
+    it("should allow merging with empty Observable", async () => {
+      const observable = Observable.from([0, 1, 2, 3, 4, 5]).merge(
+        Observable.empty()
+      );
+      const actual = await observable.toArray();
+      expect(actual).toEqual([0, 1, 2, 3, 4, 5]);
+    });
   });
   describe("#promise", () => {
     it("should resolve promise to Observable", async () => {
@@ -62,7 +69,7 @@ describe("Observable", () => {
       expect(await observable.toArray()).toEqual([[1]]);
     });
   });
-  describe("#empyt", () => {
+  describe("#empty", () => {
     it("should emit no items", async () => {
       const observable = Observable.empty();
       expect(await observable.toArray()).toEqual([]);
@@ -120,6 +127,22 @@ describe("Observable", () => {
         const observable = Observable.just("hello world");
         expect(await observable.toArray()).toEqual(["hello world"]);
       });
+    });
+  });
+  describe("#filter", () => {
+    it("should remove odd numbers", async () => {
+      const observable = Observable.from([1, 2, 3, 4, 5, 6, 7, 8, 9]).filter(
+        (i) => i % 2 === 0
+      );
+      expect(await observable.toArray()).toEqual([2, 4, 6, 8]);
+    });
+  });
+  describe("#asyncFilter", () => {
+    it("should remove even numbers", async () => {
+      const observable = Observable.from([
+        1, 2, 3, 4, 5, 6, 7, 8, 9,
+      ]).asyncFilter(async (i) => Promise.resolve(i % 2 !== 0));
+      expect(await observable.toArray()).toEqual([1, 3, 5, 7, 9]);
     });
   });
   describe("#from", () => {
