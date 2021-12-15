@@ -106,7 +106,7 @@ export default class Observable<T> {
             innerIterator = mapFn(value).iterator;
             const final = await innerIterator.next();
             innerValue = final.value;
-            innerDone = final.done;
+            innerDone = final.done || false;
           }
         }
         return { value: innerValue, done: innerDone };
