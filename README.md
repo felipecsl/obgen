@@ -13,7 +13,7 @@ yarn add obgen
 or using npm:
 
 ```bash
-npm i --save lodash
+npm i --save obgen
 ```
 
 ## Usage
