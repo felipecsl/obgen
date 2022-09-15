@@ -166,7 +166,7 @@ export default class Observable<T> {
   }
 
   /** Creates a new stream that buffers events until they are fully consumed by the `Observer` */
-  static buffer<T>(onSubscribe: (strem: Stream<T>) => any): Observable<T> {
+  static buffer<T>(onSubscribe: (stream: Stream<T>) => any): Observable<T> {
     return new Observable(new BufferedIterator(onSubscribe));
   }
 
