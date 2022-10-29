@@ -22,9 +22,18 @@ Observables are lazy streams of data that emit items asynchronously. They may be
 
 ```typescript
 import Observable from "obgen";
+import {
+  asyncDefer,
+  buffer,
+  empty,
+  from,
+  just,
+  promise,
+  wrap,
+} from "obgen/factoryFunctions";
 
 const arr = [...Array(num).keys()].map((_, i) => i);
-const observable = Observable.from(arr)
+const observable = from(arr)
   .map((i) => i * 2)
   .filter((i) => i % 2 == 0)
   .take(10);
@@ -65,17 +74,17 @@ Observables can be created in multiple ways. For example, you can manually wrap 
 function (which is not particularly useful by itself):
 
 ```typescript
-const observable = Observable.wrap(async function* () {
+const observable = wrap(async function* () {
   yield "a";
   yield "b";
   yield "c";
 });
 ```
 
-You can also use `Observable.buffer()` to accummulate items until subscription time:
+You can also use `buffer()` to accumulate items until subscription time:
 
 ```typescript
-const observable = Observable.buffer((stream) => {
+const observable = buffer((stream) => {
   stream.emit(1);
   stream.emit(2);
   stream.emit(3);
@@ -87,7 +96,7 @@ const observable = Observable.buffer((stream) => {
 Or asynchronously emit items:
 
 ```typescript
-const observable = Observable.buffer((stream) => {
+const observable = buffer((stream) => {
   // delay emission for a few milliseconds so that it happens after we subscribe
   times(5, (i) => setTimeout(() => stream.emit(i), i * 100));
   setTimeout(() => stream.end(), 600);
