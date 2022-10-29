@@ -1,14 +1,5 @@
-import Observable from "../observable";
+import { asyncDefer, buffer, empty, from, just, promise, wrap } from "../index";
 import { times } from "lodash";
-import {
-  asyncDefer,
-  buffer,
-  empty,
-  from,
-  just,
-  promise,
-  wrap,
-} from "../factoryFunctions";
 
 describe("Observable", () => {
   describe("#buffer", () => {

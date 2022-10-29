@@ -1,9 +1,18 @@
 {
   "name": "obgen",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Javascript Observables implemented with async generators",
-  "main": "dist/observable.js",
-  "types": "dist/observable.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./asyncObservable": "./dist/asyncObservable.js",
+    "./bufferedIterator": "./dist/bufferedIterator.js",
+    "./observable": "./dist/observable.js",
+    "./deferredObservable": "./dist/deferredObservable.js",
+    "./feature": "./feature/index.js",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "prepublish": "tsc -p config/tsconfig.json",
     "build": "tsc -p config/tsconfig.json",

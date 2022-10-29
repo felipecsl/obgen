@@ -1,5 +1,5 @@
 import { DeferredPromiseResolver } from "./internal/deferredPromiseResolver";
-import { Stream } from "./stream";
+import { Stream } from "./index";
 
 /**
  * An `AsyncIterator` implementation that buffers events until they are consumed.

@@ -1,4 +1,3 @@
-import Observable, { Observer } from "./observable";
 import iteratorToIterable, {
   asyncFilterIterator,
   asyncMapIterator,
@@ -9,8 +8,8 @@ import iteratorToIterable, {
 } from "./internal/util";
 import AsyncObservable from "./asyncObservable";
 import BufferedIterator from "./bufferedIterator";
-
-export type GenericObserver<T> = Observer<T> | ((item: T) => any);
+import Observable from "./observable";
+import { GenericObserver } from "./genericObserver";
 
 /**
  * An Observable implementation that defers the creation of the underlying `Observer` until `subscribe()` is called.

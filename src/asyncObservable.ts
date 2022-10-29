@@ -1,4 +1,3 @@
-import Observable, { Observer } from "./observable";
 import iteratorToIterable, {
   asyncFilterIterator,
   asyncMapIterator,
@@ -8,7 +7,9 @@ import iteratorToIterable, {
   takeIterator,
 } from "./internal/util";
 import BufferedIterator from "./bufferedIterator";
-import { GenericObserver } from "./deferredObservable";
+import Observable from "./observable";
+import { Observer } from "./observer";
+import { GenericObserver } from "./genericObserver";
 
 export default class AsyncObservable<T> extends Observable<T> {
   private observers = new Set<Observer<T>>();

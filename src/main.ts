@@ -1,5 +1,5 @@
+import { from, interval } from "./index";
 import Observable from "./observable";
-import { from, interval } from "./factoryFunctions";
 
 (async () => {
   await testArray().subscribe(console.log);

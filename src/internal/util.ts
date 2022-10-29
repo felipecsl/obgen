@@ -1,4 +1,5 @@
-import Observable, { Observer } from "../observable";
+import Observable from "../observable";
+import { Observer } from "../observer";
 
 export default function iteratorToIterable<T>(
   iterator: AsyncIterator<T>
