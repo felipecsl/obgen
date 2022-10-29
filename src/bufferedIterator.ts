@@ -1,4 +1,4 @@
-import { DeferredPromiseResolver } from "./deferredPromiseResolver";
+import { DeferredPromiseResolver } from "./internal/deferredPromiseResolver";
 import { Stream } from "./stream";
 
 /**
@@ -30,7 +30,7 @@ export default class BufferedIterator<T, TReturn = any, TNext = undefined>
     });
   }
 
-  constructor(onCreate: (strem: Stream<T>) => any) {
+  constructor(onCreate: (stream: Stream<T>) => any) {
     const { buffer, ended } = this;
     const self = this;
     onCreate({
