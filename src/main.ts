@@ -1,20 +1,19 @@
 import Observable from "./observable";
+import { from, interval } from "./factoryFunctions";
 
 (async () => {
-  testArray().subscribe(console.log);
+  await testArray().subscribe(console.log);
 })();
 
 // @ts-ignore
 function testFlatMap(items: number = 100): Observable<string> {
   const arr = rangeTo(items);
-  return Observable.from(arr).flatMap((i) =>
-    Observable.from([`${i}`, `${i}-1`, `${i}-2`, `${i}-3`])
-  );
+  return from(arr).flatMap((i) => from([`${i}`, `${i}-1`, `${i}-2`, `${i}-3`]));
 }
 
 function testArray(items: number = 100): Observable<number> {
   const arr = rangeTo(items);
-  return Observable.from(arr)
+  return from(arr)
     .map((i) => i * 2)
     .filter((i) => i % 2 == 0)
     .take(10);
@@ -22,7 +21,7 @@ function testArray(items: number = 100): Observable<number> {
 
 // @ts-ignore
 function testInterval(intervalMs: number = 1000): Observable<string> {
-  return Observable.interval(intervalMs)
+  return interval(intervalMs)
     .map((_) => new Date().getTime())
     .map((i) => (i / 1000).toFixed(0));
 }
