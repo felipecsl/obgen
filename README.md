@@ -22,15 +22,7 @@ Observables are lazy streams of data that emit items asynchronously. They may be
 
 ```typescript
 import Observable from "obgen/dist/observable";
-import {
-  asyncDefer,
-  buffer,
-  empty,
-  from,
-  just,
-  promise,
-  wrap,
-} from "obgen";
+import { asyncDefer, buffer, empty, from, just, promise, wrap } from "obgen";
 
 const arr = [...Array(num).keys()].map((_, i) => i);
 const observable = from(arr)
