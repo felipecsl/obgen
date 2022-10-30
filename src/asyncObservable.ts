@@ -1,56 +1,32 @@
-import iteratorToIterable, {
+import {
   asyncFilterIterator,
   asyncMapIterator,
   filterIterator,
-  isObserver,
+  flatMapIterator,
+  iteratorToGenerator,
   mapIterator,
   takeIterator,
 } from "./internal/util";
 import BufferedIterator from "./bufferedIterator";
 import Observable from "./observable";
-import { Observer } from "./observer";
-import { GenericObserver } from "./genericObserver";
 
+/** Observable implementations that eagerly buffers events until they are fully consumed by the `Observer` */
 export default class AsyncObservable<T> extends Observable<T> {
-  private observers = new Set<Observer<T>>();
-  private promise: Promise<void> | null = null;
+  private readonly buffer: BufferedIterator<T>;
 
-  constructor(iterator: AsyncIterator<T>, observer?: GenericObserver<T>) {
-    super(iterator);
-    this.addObserver(observer);
-    const self = this;
-    const subscription = async () => {
-      for await (const element of this.iterable()) {
-        self.observers.forEach((s) => s.onNext(element));
-      }
-      self.observers.forEach((s) => s.onComplete && s.onComplete());
-    };
-    this.promise = subscription();
+  constructor(generatorFn: () => AsyncGenerator<T>) {
+    super(generatorFn);
+    this.buffer = BufferedIterator.fromIterables(generatorFn());
   }
 
+  /** Iterates over the items in this iterable, draining any previously buffered items */
   override iterable(): AsyncIterable<T> {
-    const { iterator } = this;
-    return iteratorToIterable(iterator);
+    const { buffer } = this;
+    return buffer;
   }
 
-  /**
-   * Subscribes to events emitted by this `Observable`, calling the provided `observer` function
-   * whenever a new item is available. Returns a `Promise` that resolves once the `Observable` has
-   * completed emitting all events.
-   */
-  override async subscribe(observer?: GenericObserver<T>): Promise<unknown> {
-    const { promise } = this;
-    this.addObserver(observer);
-    return new Promise((resolve) => promise!.then(resolve));
-  }
-
-  private addObserver(observer?: GenericObserver<T>) {
-    const { observers } = this;
-    if (observer) {
-      observers.add(
-        isObserver(observer) ? observer : ({ onNext: observer } as Observer<T>)
-      );
-    }
+  override iterator(): AsyncIterator<T> {
+    return this.buffer;
   }
 
   /**
@@ -59,9 +35,8 @@ export default class AsyncObservable<T> extends Observable<T> {
    * data.
    */
   override async toArray(): Promise<T[]> {
-    const ret: T[] = [];
-    await this.subscribe((i) => ret.push(i));
-    return ret;
+    const { buffer } = this;
+    return buffer.drain();
   }
 
   /**
@@ -70,8 +45,10 @@ export default class AsyncObservable<T> extends Observable<T> {
    * function.
    */
   override map<O>(mapFn: (item: T) => O): Observable<O> {
-    const { iterator } = this;
-    return new AsyncObservable(mapIterator(iterator, mapFn));
+    const { buffer } = this;
+    return new AsyncObservable(() =>
+      iteratorToGenerator(mapIterator(buffer, mapFn))
+    );
   }
 
   /**
@@ -80,8 +57,10 @@ export default class AsyncObservable<T> extends Observable<T> {
    * value from the `Promise` returned by `mapFn` function.
    */
   override asyncMap<O>(mapFn: (item: T) => Promise<O>): Observable<O> {
-    const { iterator } = this;
-    return new AsyncObservable(asyncMapIterator(iterator, mapFn));
+    const { buffer } = this;
+    return new AsyncObservable(() =>
+      iteratorToGenerator(asyncMapIterator(buffer, mapFn))
+    );
   }
 
   /**
@@ -89,34 +68,18 @@ export default class AsyncObservable<T> extends Observable<T> {
    * new single`Observable` which is returned by this function.
    */
   override merge(other: Observable<T>): Observable<T> {
-    return new AsyncObservable(
-      BufferedIterator.from(this.iterable(), other.iterable())
+    return new AsyncObservable(() =>
+      iteratorToGenerator(
+        BufferedIterator.fromIterables(this.iterable(), other.iterable())
+      )
     );
   }
 
   override flatMap<O>(mapFn: (item: T) => AsyncObservable<O>): Observable<O> {
-    const { iterator } = this;
-    let innerIterator: AsyncIterator<O> | null;
-    let isDone = false;
-    return new AsyncObservable({
-      async next() {
-        let innerValue = null;
-        let innerDone = true;
-        while (innerDone) {
-          const { value, done } = await iterator.next();
-          isDone = done || false;
-          if (isDone) {
-            return { value: null, done: true };
-          } else {
-            innerIterator = mapFn(value).iterator;
-            const final = await innerIterator.next();
-            innerValue = final.value;
-            innerDone = final.done || false;
-          }
-        }
-        return { value: innerValue, done: innerDone };
-      },
-    });
+    const { buffer } = this;
+    return new AsyncObservable(() =>
+      iteratorToGenerator(flatMapIterator(buffer, mapFn))
+    );
   }
 
   /**
@@ -124,19 +87,25 @@ export default class AsyncObservable<T> extends Observable<T> {
    * resolves to `true`
    */
   override asyncFilter(filterFn: (item: T) => Promise<boolean>): Observable<T> {
-    const { iterator } = this;
-    return new AsyncObservable(asyncFilterIterator(iterator, filterFn));
+    const { buffer } = this;
+    return new AsyncObservable(() =>
+      iteratorToGenerator(asyncFilterIterator(buffer, filterFn))
+    );
   }
 
   /** Returns only the elements of the `Observable` for whom `filterFn` returns true */
   override filter(filterFn: (item: T) => boolean): Observable<T> {
-    const { iterator } = this;
-    return new AsyncObservable(filterIterator(iterator, filterFn));
+    const { buffer } = this;
+    return new AsyncObservable(() =>
+      iteratorToGenerator(filterIterator(buffer, filterFn))
+    );
   }
 
   /** Returns a new `Observable` that only yields the first `num` items */
   override take(num: number): Observable<T> {
-    const { iterator } = this;
-    return new AsyncObservable(takeIterator(iterator, num));
+    const { buffer } = this;
+    return new AsyncObservable(() =>
+      iteratorToGenerator(takeIterator(buffer, num))
+    );
   }
 }

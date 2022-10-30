@@ -2,22 +2,16 @@ import AsyncObservable from "./asyncObservable";
 import BufferedIterator from "./bufferedIterator";
 import DeferredObservable from "./deferredObservable";
 import Observable from "./observable";
-
-export interface Stream<T> {
-  /** Emits an event to the stream. */
-  emit(val: T): any;
-  /**
-   * Emits an event that terminates this stream. No new items will be emitted after this method is
-   * called
-   */
-  end(): any;
-}
+import { iteratorToGenerator } from "./internal/util";
+import { Stream } from "./stream";
 
 /** Creates a new stream that buffers events until they are fully consumed by the `Observer` */
 export function buffer<T>(
   onSubscribe: (stream: Stream<T>) => any
 ): Observable<T> {
-  return new AsyncObservable(new BufferedIterator(onSubscribe));
+  return new AsyncObservable(() =>
+    iteratorToGenerator(new BufferedIterator(onSubscribe))
+  );
 }
 
 /**
@@ -25,26 +19,61 @@ export function buffer<T>(
  * called on the underlying `AsyncIterator`.
  */
 export function defer<T>(onNext: (stream: Stream<T>) => any): Observable<T> {
-  return new DeferredObservable({
-    next() {
-      return new Promise(async (resolve) => {
-        onNext({
-          emit(value: T, done: boolean = false) {
-            resolve({ value, done });
-          },
+  return new DeferredObservable(() =>
+    iteratorToGenerator({
+      next() {
+        return new Promise(async (resolve) => {
+          onNext({
+            emit(value: T, done: boolean = false) {
+              resolve({ value, done });
+            },
 
-          end() {
-            resolve({ value: null, done: true });
-          },
+            end() {
+              resolve({ value: null, done: true });
+            },
+          });
         });
-      });
-    },
-  });
+      },
+    })
+  );
 }
 
-/** Returns a new `Observable` that calls the provided `iteratorFn` function to emit events */
-export function wrap<T>(iteratorFn: () => AsyncIterator<T>): Observable<T> {
-  return new AsyncObservable(iteratorFn());
+/**
+ * Constructs an `Observable` that defers resolution of the provided `promiseFn` until the
+ * `Observable` is subscribed to (eg.: `subscribe()` or `toArray()` called).
+ */
+export function asyncDefer<T>(promiseFn: () => Promise<T>): Observable<T> {
+  let done = false;
+  return new DeferredObservable(() =>
+    iteratorToGenerator({
+      next() {
+        return new Promise(async (resolve) => {
+          if (!done) {
+            const value = await promiseFn();
+            resolve({ value, done });
+            done = true;
+          } else {
+            resolve({ value: null, done });
+          }
+        });
+      },
+    })
+  );
+}
+
+/**
+ * Returns a new deferred `Observable` that calls the provided `iteratorFn` function to emit events when the Observable
+ * is iterated over.
+ */
+export function deferredWrap<T>(
+  iteratorFn: () => AsyncGenerator<T>
+): Observable<T> {
+  return new DeferredObservable(iteratorFn);
+}
+
+/** Returns a new `Observable` that immediately calls and buffers the provided `iteratorFn` function to emit events */
+export function wrap<T>(iteratorFn: () => AsyncGenerator<T>): Observable<T> {
+  return new AsyncObservable(iteratorFn);
 }
 
 /** Returns a new `Observable` that, upon subscription, emits items from the input `arr` array */
@@ -54,7 +83,7 @@ export function from<T>(arr: T[]): Observable<T> {
     if (i < arr.length) {
       stream.emit(arr[i++]);
     } else {
-      stream.end();
+      stream.end?.call(stream);
     }
   });
 }
@@ -69,30 +98,9 @@ export async function promise<T>(
   return just(await promiseFn());
 }
 
-/**
- * Constructs an `Observable` that defers resolution of the provided `promiseFn` until the
- * `Observable` is subscribed to (eg.: `subscribe()` or `toArray()` called).
- */
-export function asyncDefer<T>(promiseFn: () => Promise<T>): Observable<T> {
-  let done = false;
-  return new DeferredObservable({
-    next() {
-      return new Promise(async (resolve) => {
-        if (!done) {
-          const value = await promiseFn();
-          resolve({ value, done });
-          done = true;
-        } else {
-          resolve({ value: null, done });
-        }
-      });
-    },
-  });
-}
-
 /** Returns a new empty `Observable`, which emits no items and ends immediately. */
 export function empty<T>(): Observable<T> {
-  return defer((stream) => stream.end());
+  return defer((stream) => stream.end?.call(stream));
 }
 
 /**
