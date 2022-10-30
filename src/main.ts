@@ -1,23 +1,22 @@
 import { from, interval } from "./index";
 import Observable from "./observable";
+import BufferedIterator from "./bufferedIterator";
+import { delay } from "./internal/util";
 
 (async () => {
-  for await (const item of testArray().iterable()) {
-    console.log(item);
-  }
-  // const iterator: () => AsyncIterator<string> = async function* () {
-  //   yield "a";
-  //   yield "b";
-  //   yield "c";
-  // };
-  // const range = {
-  //   [Symbol.asyncIterator]() {
-  //     return iterator();
-  //   },
-  // };
-  // for await (let value of range) {
-  //   console.log(value); // 1, then 2, then 3, then 4, then 5
+  const buffer = new BufferedIterator();
+  const callback = (c: string) => buffer.emit(c);
+  callback("a");
+  callback("b");
+  callback("c");
+  delay(1000).then(() => callback("d"));
+  delay(2000).then(() => callback("e"));
+  delay(3000).then(() => buffer.end());
+  // for await (const value of buffer) {
+  //   console.log(value);
   // }
+  console.log(await buffer.drain());
+  console.log("done");
 })();
 
 // @ts-ignore
@@ -26,6 +25,7 @@ function testFlatMap(items: number = 100): Observable<string> {
   return from(arr).flatMap((i) => from([`${i}`, `${i}-1`, `${i}-2`, `${i}-3`]));
 }
 
+// @ts-ignore
 function testArray(items: number = 100): Observable<number> {
   const arr = rangeTo(items);
   return from(arr)

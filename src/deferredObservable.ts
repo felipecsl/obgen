@@ -70,7 +70,7 @@ export default class DeferredObservable<T> extends Observable<T> {
   override merge(other: Observable<T>): Observable<T> {
     return new DeferredObservable(() =>
       iteratorToGenerator(
-        BufferedIterator.from(this.iterable(), other.iterable())
+        BufferedIterator.fromIterables(this.iterable(), other.iterable())
       )
     );
   }
@@ -83,7 +83,7 @@ export default class DeferredObservable<T> extends Observable<T> {
   }
 
   override async toArray(): Promise<T[]> {
-    const buffer = BufferedIterator.from(this.iterable());
+    const buffer = BufferedIterator.fromIterables(this.iterable());
     return buffer.drain();
   }
 }

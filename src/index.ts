@@ -3,16 +3,7 @@ import BufferedIterator from "./bufferedIterator";
 import DeferredObservable from "./deferredObservable";
 import Observable from "./observable";
 import { iteratorToGenerator } from "./internal/util";
-
-export interface Stream<T> {
-  /** Emits an event to the stream. */
-  emit(val: T): any;
-  /**
-   * Emits an event that terminates this stream. No new items will be emitted after this method is
-   * called
-   */
-  end(): any;
-}
+import { Stream } from "./stream";
 
 /** Creates a new stream that buffers events until they are fully consumed by the `Observer` */
 export function buffer<T>(
@@ -92,7 +83,7 @@ export function from<T>(arr: T[]): Observable<T> {
     if (i < arr.length) {
       stream.emit(arr[i++]);
     } else {
-      stream.end();
+      stream.end?.call(stream);
     }
   });
 }
@@ -109,7 +100,7 @@ export async function promise<T>(
 
 /** Returns a new empty `Observable`, which emits no items and ends immediately. */
 export function empty<T>(): Observable<T> {
-  return defer((stream) => stream.end());
+  return defer((stream) => stream.end?.call(stream));
 }
 
 /**

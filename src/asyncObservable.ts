@@ -1,4 +1,4 @@
-import iteratorToIterable, {
+import {
   asyncFilterIterator,
   asyncMapIterator,
   filterIterator,
@@ -16,13 +16,13 @@ export default class AsyncObservable<T> extends Observable<T> {
 
   constructor(generatorFn: () => AsyncGenerator<T>) {
     super(generatorFn);
-    this.buffer = BufferedIterator.from(generatorFn());
+    this.buffer = BufferedIterator.fromIterables(generatorFn());
   }
 
   /** Iterates over the items in this iterable, draining any previously buffered items */
   override iterable(): AsyncIterable<T> {
     const { buffer } = this;
-    return iteratorToIterable(() => buffer);
+    return buffer;
   }
 
   override iterator(): AsyncIterator<T> {
@@ -70,7 +70,7 @@ export default class AsyncObservable<T> extends Observable<T> {
   override merge(other: Observable<T>): Observable<T> {
     return new AsyncObservable(() =>
       iteratorToGenerator(
-        BufferedIterator.from(this.iterable(), other.iterable())
+        BufferedIterator.fromIterables(this.iterable(), other.iterable())
       )
     );
   }
