@@ -21,7 +21,7 @@ npm i --save obgen
 Observables are lazy streams of data that emit items asynchronously. They may be infinite or include an optional terminal event to signal the end of the stream. You can `map`, `filter`, etc.:
 
 ```typescript
-import Observable from "obgen";
+import Observable from "obgen/dist/observable";
 import {
   asyncDefer,
   buffer,
@@ -30,7 +30,7 @@ import {
   just,
   promise,
   wrap,
-} from "obgen/factoryFunctions";
+} from "obgen";
 
 const arr = [...Array(num).keys()].map((_, i) => i);
 const observable = from(arr)
