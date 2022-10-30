@@ -1,10 +1,22 @@
 import { GenericObserver } from "./genericObserver";
+import { isObserver } from "./internal/util";
 
 export default abstract class Observable<T> {
-  protected constructor(readonly iterator: AsyncIterator<T>) {}
+  protected constructor(readonly generatorFn: () => AsyncGenerator<T>) {}
+
+  async subscribe(observer?: GenericObserver<T>): Promise<void> {
+    for await (const item of this.iterable()) {
+      if (isObserver(observer)) {
+        observer.onNext(item);
+      } else {
+        (observer as (item: T) => any)(item);
+      }
+    }
+    isObserver(observer) && observer.onComplete && observer.onComplete();
+  }
 
   abstract iterable(): AsyncIterable<T>;
-  abstract subscribe(observer?: GenericObserver<T>): Promise<unknown>;
+  abstract iterator(): AsyncIterator<T>;
   abstract toArray(): Promise<T[]>;
   abstract map<O>(mapFn: (item: T) => O): Observable<O>;
   abstract flatMap<O>(mapFn: (item: T) => Observable<O>): Observable<O>;

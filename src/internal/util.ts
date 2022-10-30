@@ -2,11 +2,33 @@ import Observable from "../observable";
 import { Observer } from "../observer";
 
 export default function iteratorToIterable<T>(
-  iterator: AsyncIterator<T>
+  iteratorFn: () => AsyncIterator<T, any, undefined>
 ): AsyncIterable<T> {
   return {
     [Symbol.asyncIterator]() {
-      return iterator;
+      return iteratorFn();
+    },
+  };
+}
+
+export function iteratorToGenerator<T>(
+  iterator: AsyncIterator<T>
+): AsyncGenerator<T> {
+  return {
+    async next() {
+      return iterator.next();
+    },
+
+    return(_: T): Promise<IteratorResult<T, any>> {
+      return Promise.resolve({ done: true, value: null });
+    },
+
+    throw(_: any): Promise<IteratorResult<T, any>> {
+      return Promise.resolve({ done: true, value: null });
+    },
+
+    [Symbol.asyncIterator]() {
+      return this;
     },
   };
 }
@@ -15,7 +37,7 @@ export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 export function isObserver<T>(observer: any): observer is Observer<T> {
-  return typeof observer.onNext === "function";
+  return typeof observer?.onNext === "function";
 }
 
 export function ensure<T>(value: T, errorMsg: string): T | void {
@@ -66,7 +88,7 @@ export function flatMapIterator<T, O>(
         if (isDone) {
           return { value: null, done: true };
         } else {
-          innerIterator = mapFn(value).iterator;
+          innerIterator = mapFn(value).iterator();
           const final = await innerIterator.next();
           innerValue = final.value;
           innerDone = final.done || false;

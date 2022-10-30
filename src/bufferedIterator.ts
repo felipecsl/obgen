@@ -1,34 +1,23 @@
 import { DeferredPromiseResolver } from "./internal/deferredPromiseResolver";
 import { Stream } from "./index";
+import iteratorToIterable from "./internal/util";
 
 /**
  * An `AsyncIterator` implementation that buffers events until they are consumed.
  * Calling next() automatically waits until new events are available in the stream.
+ * As items are iterated over, they are removed from the buffer. That means that
+ * you can only iterate over each item once.
  *
  * TODO configure max capacity
  * TODO handle backpressure
  */
-export default class BufferedIterator<T, TReturn = any, TNext = undefined>
-  implements AsyncIterator<T, TReturn, TNext>
+export default class BufferedIterator<T>
+  implements AsyncIterator<T, any, undefined>
 {
   private readonly deferredPromises: DeferredPromiseResolver<T>[] = [];
   private readonly buffer: T[] = [];
   // Marks the end of the stream
   private ended = false;
-
-  /** Constructs a new `BufferedIterator` from the provided `AsyncIterable`(s) */
-  static from<T>(...iterables: AsyncIterable<T>[]): BufferedIterator<T> {
-    return new BufferedIterator(async (stream) => {
-      await Promise.all(
-        iterables.map(async (iterable) => {
-          for await (const item of iterable) {
-            stream.emit(item);
-          }
-        })
-      );
-      stream.end();
-    });
-  }
 
   constructor(onCreate: (stream: Stream<T>) => any) {
     const { buffer, ended } = this;
@@ -55,6 +44,43 @@ export default class BufferedIterator<T, TReturn = any, TNext = undefined>
     });
   }
 
+  /** Constructs a new `BufferedIterator` from the provided `AsyncIterable`(s) */
+  static from<T>(...iterables: AsyncIterable<T>[]): BufferedIterator<T> {
+    return new BufferedIterator(async (stream) => {
+      await Promise.all(
+        iterables.map(async (iterable) => {
+          for await (const item of iterable) {
+            stream.emit(item);
+          }
+        })
+      );
+      stream.end();
+    });
+  }
+
+  clone(): BufferedIterator<T> {
+    const { buffer } = this;
+    return new BufferedIterator<T>(async (stream) => {
+      buffer.forEach((item) => stream.emit(item));
+      for await (const item of iteratorToIterable(() => this)) {
+        stream.emit(item);
+      }
+    });
+  }
+
+  /**
+   * Drains (collects) all items from the buffer and returns a Promise that resolves to an array once all the items
+   * in the stream have been collected. This method clears the buffer, thus subsequent enumerations of the iterator
+   * will not yield any items that have already been drained.
+   */
+  async drain(): Promise<T[]> {
+    const buf: T[] = [];
+    for await (const item of iteratorToIterable<T>(() => this)) {
+      buf.push(item);
+    }
+    return buf;
+  }
+
   private async waitForIncomingItems() {
     // lock until an event is emitted by awaiting on promise resolver
     const { deferredPromises } = this;
@@ -79,9 +105,9 @@ export default class BufferedIterator<T, TReturn = any, TNext = undefined>
     resolve({ value: this.buffer.shift() });
   }
 
-  next(..._: [] | [TNext]): Promise<IteratorResult<T, TReturn>> {
+  next(..._: [] | [undefined]): Promise<IteratorResult<T, any>> {
+    const { buffer, ended } = this;
     return new Promise(async (resolve) => {
-      const { buffer, ended } = this;
       if (buffer.length === 0) {
         // buffer is drained
         if (ended) {

@@ -1,4 +1,13 @@
-import { asyncDefer, buffer, empty, from, just, promise, wrap } from "../index";
+import {
+  asyncDefer,
+  buffer,
+  deferredWrap,
+  empty,
+  from,
+  just,
+  promise,
+  wrap,
+} from "../index";
 import { times } from "lodash";
 
 describe("Observable", () => {
@@ -124,33 +133,58 @@ describe("Observable", () => {
         });
         const mock = jest.fn();
         await observable.subscribe(mock);
-        expect(mock).toHaveBeenCalledTimes(3);
         expect(mock).toHaveBeenNthCalledWith(1, "a");
         expect(mock).toHaveBeenNthCalledWith(2, "b");
         expect(mock).toHaveBeenNthCalledWith(3, "c");
+        expect(mock).toHaveBeenCalledTimes(3);
+      });
+    });
+  });
+  describe("#deferredWrap", () => {
+    describe("#toArray", () => {
+      it("emits items", async () => {
+        const observable = deferredWrap(async function* () {
+          yield "a";
+          yield "b";
+          yield "c";
+        });
+        expect(await observable.toArray()).toEqual(["a", "b", "c"]);
+      });
+    });
+    describe("#subscribe", () => {
+      it("emits items", async () => {
+        const observable = deferredWrap(async function* () {
+          yield "a";
+          yield "b";
+          yield "c";
+        });
+        const mock = jest.fn();
+        await observable.subscribe(mock);
+        expect(mock).toHaveBeenNthCalledWith(1, "a");
+        expect(mock).toHaveBeenNthCalledWith(2, "b");
+        expect(mock).toHaveBeenNthCalledWith(3, "c");
+        expect(mock).toHaveBeenCalledTimes(3);
       });
     });
     describe("#subscribe with multiple observers", () => {
       it("emits same items to all observers", async () => {
-        const observable = wrap(async function* () {
+        const observable = deferredWrap(async function* () {
           yield "a";
           yield "b";
           yield "c";
         });
         const mock1 = jest.fn();
         const mock2 = jest.fn();
-        await Promise.all([
-          observable.subscribe(mock1),
-          observable.subscribe(mock2),
-        ]);
-        expect(mock1).toHaveBeenCalledTimes(3);
+        await observable.subscribe(mock1);
+        await observable.subscribe(mock2);
         expect(mock1).toHaveBeenNthCalledWith(1, "a");
         expect(mock1).toHaveBeenNthCalledWith(2, "b");
         expect(mock1).toHaveBeenNthCalledWith(3, "c");
-        expect(mock2).toHaveBeenCalledTimes(3);
         expect(mock2).toHaveBeenNthCalledWith(1, "a");
         expect(mock2).toHaveBeenNthCalledWith(2, "b");
         expect(mock2).toHaveBeenNthCalledWith(3, "c");
+        expect(mock1).toHaveBeenCalledTimes(3);
+        expect(mock2).toHaveBeenCalledTimes(3);
       });
     });
   });

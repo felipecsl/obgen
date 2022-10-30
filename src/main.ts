@@ -2,7 +2,22 @@ import { from, interval } from "./index";
 import Observable from "./observable";
 
 (async () => {
-  await testArray().subscribe(console.log);
+  for await (const item of testArray().iterable()) {
+    console.log(item);
+  }
+  // const iterator: () => AsyncIterator<string> = async function* () {
+  //   yield "a";
+  //   yield "b";
+  //   yield "c";
+  // };
+  // const range = {
+  //   [Symbol.asyncIterator]() {
+  //     return iterator();
+  //   },
+  // };
+  // for await (let value of range) {
+  //   console.log(value); // 1, then 2, then 3, then 4, then 5
+  // }
 })();
 
 // @ts-ignore

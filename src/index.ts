@@ -2,6 +2,7 @@ import AsyncObservable from "./asyncObservable";
 import BufferedIterator from "./bufferedIterator";
 import DeferredObservable from "./deferredObservable";
 import Observable from "./observable";
+import { iteratorToGenerator } from "./internal/util";
 
 export interface Stream<T> {
   /** Emits an event to the stream. */
@@ -17,7 +18,9 @@ export interface Stream<T> {
 export function buffer<T>(
   onSubscribe: (stream: Stream<T>) => any
 ): Observable<T> {
-  return new AsyncObservable(new BufferedIterator(onSubscribe));
+  return new AsyncObservable(() =>
+    iteratorToGenerator(new BufferedIterator(onSubscribe))
+  );
 }
 
 /**
@@ -25,26 +28,61 @@ export function buffer<T>(
  * called on the underlying `AsyncIterator`.
  */
 export function defer<T>(onNext: (stream: Stream<T>) => any): Observable<T> {
-  return new DeferredObservable({
-    next() {
-      return new Promise(async (resolve) => {
-        onNext({
-          emit(value: T, done: boolean = false) {
-            resolve({ value, done });
-          },
+  return new DeferredObservable(() =>
+    iteratorToGenerator({
+      next() {
+        return new Promise(async (resolve) => {
+          onNext({
+            emit(value: T, done: boolean = false) {
+              resolve({ value, done });
+            },
 
-          end() {
-            resolve({ value: null, done: true });
-          },
+            end() {
+              resolve({ value: null, done: true });
+            },
+          });
         });
-      });
-    },
-  });
+      },
+    })
+  );
 }
 
-/** Returns a new `Observable` that calls the provided `iteratorFn` function to emit events */
-export function wrap<T>(iteratorFn: () => AsyncIterator<T>): Observable<T> {
-  return new AsyncObservable(iteratorFn());
+/**
+ * Constructs an `Observable` that defers resolution of the provided `promiseFn` until the
+ * `Observable` is subscribed to (eg.: `subscribe()` or `toArray()` called).
+ */
+export function asyncDefer<T>(promiseFn: () => Promise<T>): Observable<T> {
+  let done = false;
+  return new DeferredObservable(() =>
+    iteratorToGenerator({
+      next() {
+        return new Promise(async (resolve) => {
+          if (!done) {
+            const value = await promiseFn();
+            resolve({ value, done });
+            done = true;
+          } else {
+            resolve({ value: null, done });
+          }
+        });
+      },
+    })
+  );
+}
+
+/**
+ * Returns a new deferred `Observable` that calls the provided `iteratorFn` function to emit events when the Observable
+ * is iterated over.
+ */
+export function deferredWrap<T>(
+  iteratorFn: () => AsyncGenerator<T>
+): Observable<T> {
+  return new DeferredObservable(iteratorFn);
+}
+
+/** Returns a new `Observable` that immediately calls and buffers the provided `iteratorFn` function to emit events */
+export function wrap<T>(iteratorFn: () => AsyncGenerator<T>): Observable<T> {
+  return new AsyncObservable(iteratorFn);
 }
 
 /** Returns a new `Observable` that, upon subscription, emits items from the input `arr` array */
@@ -67,27 +105,6 @@ export async function promise<T>(
   promiseFn: () => Promise<T>
 ): Promise<Observable<T>> {
   return just(await promiseFn());
-}
-
-/**
- * Constructs an `Observable` that defers resolution of the provided `promiseFn` until the
- * `Observable` is subscribed to (eg.: `subscribe()` or `toArray()` called).
- */
-export function asyncDefer<T>(promiseFn: () => Promise<T>): Observable<T> {
-  let done = false;
-  return new DeferredObservable({
-    next() {
-      return new Promise(async (resolve) => {
-        if (!done) {
-          const value = await promiseFn();
-          resolve({ value, done });
-          done = true;
-        } else {
-          resolve({ value: null, done });
-        }
-      });
-    },
-  });
 }
 
 /** Returns a new empty `Observable`, which emits no items and ends immediately. */
