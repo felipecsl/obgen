@@ -3,21 +3,7 @@ import Observable from "./observable";
 import BufferedIterator from "./bufferedIterator";
 import { delay } from "./internal/util";
 
-(async () => {
-  const buffer = new BufferedIterator();
-  const callback = (c: string) => buffer.emit(c);
-  callback("a");
-  callback("b");
-  callback("c");
-  delay(1000).then(() => callback("d"));
-  delay(2000).then(() => callback("e"));
-  delay(3000).then(() => buffer.end());
-  // for await (const value of buffer) {
-  //   console.log(value);
-  // }
-  console.log(await buffer.drain());
-  console.log("done");
-})();
+(async () => {})();
 
 // @ts-ignore
 function testFlatMap(items: number = 100): Observable<string> {

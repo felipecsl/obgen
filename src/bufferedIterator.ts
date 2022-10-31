@@ -13,7 +13,9 @@ import { Stream } from "./stream";
 export default class BufferedIterator<T>
   implements AsyncIterableIterator<T>, Stream<T>
 {
-  private readonly deferredPromises: DeferredPromiseResolver<T>[] = [];
+  private readonly deferredPromises: DeferredPromiseResolver<
+    IteratorResult<T>
+  >[] = [];
   private readonly buffer: T[] = [];
   // Marks the end of the stream
   private ended = false;
@@ -22,12 +24,17 @@ export default class BufferedIterator<T>
     onCreate(this);
   }
 
+  /**
+   * Marks the stream as ended, which asserts there will be no more incoming items. This releases any currently
+   * awaiting listeners.
+   */
   end() {
-    if (this.ended) {
+    const { ended } = this;
+    if (ended) {
       throw new Error("Stream has already ended");
     } else {
       this.ended = true;
-      this.resolvePromises();
+      this.endStream();
     }
   }
 
@@ -35,14 +42,24 @@ export default class BufferedIterator<T>
     return this;
   }
 
+  /**
+   * Push an item to the stream. Immediately delivers the new item to any currently awaiting listeners or otherwise
+   * enqueues it in the buffer for later delivery.
+   */
   emit(value: T) {
     // TODO: wrap in a critical section (run exclusively)
-    if (this.ended) {
+    const { deferredPromises, ended, buffer } = this;
+    if (ended) {
       throw new Error("Stream has already ended");
     } else {
-      this.buffer.push(value);
+      buffer.push(value);
     }
-    this.resolvePromises();
+    if (deferredPromises.length > 0) {
+      // if there are any active listeners, deliver the new item to
+      // all of them and immediately dequeue it
+      this.resolvePromises(value);
+      buffer.shift();
+    }
   }
 
   /** Constructs a new `BufferedIterator` from the provided `AsyncIterable`(s) */
@@ -61,12 +78,15 @@ export default class BufferedIterator<T>
     });
   }
 
+  /**
+   * Creates a new BufferedIterator instance with a copy of the current buffer without draining it.
+   */
   clone(): BufferedIterator<T> {
-    const { buffer } = this;
+    const { buffer, ended } = this;
     return new BufferedIterator<T>(async (stream) => {
       buffer.forEach((item) => stream.emit(item));
-      for await (const item of this) {
-        stream.emit(item);
+      if (ended) {
+        stream.end!();
       }
     });
   }
@@ -84,57 +104,37 @@ export default class BufferedIterator<T>
     return buf;
   }
 
-  private async waitForIncomingItems() {
-    // lock until an event is emitted by awaiting on promise resolver
-    const { deferredPromises } = this;
-    const deferredPromise = new DeferredPromiseResolver<T>();
-    deferredPromises.push(deferredPromise);
-    await deferredPromise.promise();
-  }
-
-  private resolvePromises() {
-    // TODO: wrap in a critical section
+  /** Release listeners who are waiting for a new item to be yielded */
+  private resolvePromises(value: T) {
     const { deferredPromises } = this;
     while (deferredPromises.length > 0) {
-      deferredPromises.shift()!.resolve(null);
+      deferredPromises.shift()!.resolve({ value, done: false });
     }
   }
 
-  private endStream(resolve: (_: any) => void) {
-    resolve({ value: 0 as any, done: true });
+  private endStream() {
+    const { deferredPromises } = this;
+    while (deferredPromises.length > 0) {
+      deferredPromises.shift()!.resolve({ value: null, done: true });
+    }
   }
 
-  next(..._: [] | [undefined]): Promise<IteratorResult<T, any>> {
-    const { buffer, ended } = this;
-    return new Promise(async (resolve) => {
-      if (buffer.length === 0) {
-        // buffer is drained
-        if (ended) {
-          // stream has been fully consumed and ended, mark stream as done
-          resolve({ value: 0 as any, done: true } as IteratorReturnResult<T>);
-        } else {
-          // lock until a new event is emitted
-          await this.waitForIncomingItems();
-          // resolver lock was acquired
-          // the stream may have ended while we were waiting, so we check that again below
-          // TODO: Wrap in a critical session
-          if (this.ended) {
-            this.endStream(resolve);
-          } else {
-            const result: IteratorYieldResult<T> = {
-              value: buffer.shift()!,
-              done: false,
-            };
-            resolve(result);
-          }
-        }
-      } else {
-        const result: IteratorYieldResult<T> = {
-          value: buffer.shift()!,
-          done: false,
-        };
-        resolve(result);
-      }
-    });
+  /**
+   * Calling next() consumes (removes) the oldest item from the buffer if one is available or waits until a new item is
+   * available before returning it.
+   */
+  async next(..._: [] | [undefined]): Promise<IteratorResult<T, any>> {
+    const { buffer, ended, deferredPromises } = this;
+    if (buffer.length > 0) {
+      // remove and return the first (oldest) item
+      return { value: buffer.shift()!, done: false };
+    } else if (ended) {
+      // stream has been fully consumed and ended
+      return { value: 0 as any, done: true };
+    } else {
+      const deferredPromise = new DeferredPromiseResolver<IteratorResult<T>>();
+      deferredPromises.push(deferredPromise);
+      return await deferredPromise.promise();
+    }
   }
 }
