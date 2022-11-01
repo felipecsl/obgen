@@ -1,9 +1,12 @@
 import { from, interval } from "./index";
 import Observable from "./observable";
-import BufferedIterator from "./bufferedIterator";
-import { delay } from "./internal/util";
 
-(async () => {})();
+(async () => {
+  const observable = from([1, 2, 3]);
+  for await (const item of observable.iterable()) {
+    console.log(item);
+  }
+})();
 
 // @ts-ignore
 function testFlatMap(items: number = 100): Observable<string> {
