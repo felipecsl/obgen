@@ -42,7 +42,7 @@
     "jest": "27.3.1",
     "jest-circus": "^29.4.1",
     "jest-resolve": "29.4.1",
-    "jest-watch-typeahead": "1.0.0",
+    "jest-watch-typeahead": "2.2.2",
     "lodash": "^4.17.21",
     "prettier": "^2.4.1",
     "prompts": "2.4.2",
