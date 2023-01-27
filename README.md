@@ -96,6 +96,12 @@ const observable = buffer((stream) => {
 expect(await observable.toArray()).toEqual([0, 1, 2, 3, 4]);
 ```
 
+## Releasing
+
+* Bump the version in `package.json`
+* Run `npm publish`
+* Create a git tag with the new version and changelog
+
 ## License
 
 MIT
