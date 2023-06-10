@@ -2,7 +2,7 @@ import { GenericObserver } from "./genericObserver";
 import { isObserver } from "./internal/util";
 
 export default abstract class Observable<T> {
-  protected constructor(readonly generatorFn: () => AsyncGenerator<T>) {}
+  protected constructor(readonly iteratorFn: () => AsyncIterator<T>) {}
 
   async subscribe(observer?: GenericObserver<T>): Promise<void> {
     for await (const item of this.iterable()) {
