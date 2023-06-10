@@ -66,13 +66,13 @@ export function asyncDefer<T>(promiseFn: () => Promise<T>): Observable<T> {
  * is iterated over.
  */
 export function deferredWrap<T>(
-  iteratorFn: () => AsyncGenerator<T>
+  iteratorFn: () => AsyncIterator<T>
 ): Observable<T> {
   return new DeferredObservable(iteratorFn);
 }
 
 /** Returns a new `Observable` that immediately calls and buffers the provided `iteratorFn` function to emit events */
-export function wrap<T>(iteratorFn: () => AsyncGenerator<T>): Observable<T> {
+export function wrap<T>(iteratorFn: () => AsyncIterator<T>): Observable<T> {
   return new AsyncObservable(iteratorFn);
 }
 

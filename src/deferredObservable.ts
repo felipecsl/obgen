@@ -3,7 +3,6 @@ import iteratorToIterable, {
   asyncMapIterator,
   filterIterator,
   flatMapIterator,
-  iteratorToGenerator,
   mapIterator,
   takeIterator,
 } from "./internal/util";
@@ -17,69 +16,63 @@ import Observable from "./observable";
 export default class DeferredObservable<T> extends Observable<T> {
   private _iterator: AsyncIterator<T> | null = null;
 
-  constructor(generatorFn: () => AsyncGenerator<T>) {
-    super(generatorFn);
+  constructor(iteratorFn: () => AsyncIterator<T>) {
+    super(iteratorFn);
   }
 
   override iterable(): AsyncIterable<T> {
-    this._iterator = this.generatorFn();
+    this._iterator = this.iteratorFn();
     const { _iterator } = this;
     return iteratorToIterable(() => _iterator);
   }
 
   override iterator(): AsyncIterator<T> {
-    this._iterator = this._iterator || this.generatorFn();
+    this._iterator = this._iterator || this.iteratorFn();
     return this._iterator;
   }
 
   override asyncFilter(filterFn: (item: T) => Promise<boolean>): Observable<T> {
     const self = this;
     return new DeferredObservable(() =>
-      iteratorToGenerator(asyncFilterIterator(self.iterator(), filterFn))
+      asyncFilterIterator(self.iterator(), filterFn)
     );
   }
 
   override asyncMap<O>(mapFn: (item: T) => Promise<O>): Observable<O> {
     const self = this;
     return new DeferredObservable(() =>
-      iteratorToGenerator(asyncMapIterator(self.iterator(), mapFn))
+      asyncMapIterator(self.iterator(), mapFn)
     );
   }
 
   override filter(filterFn: (item: T) => boolean): Observable<T> {
     const self = this;
     return new DeferredObservable(() =>
-      iteratorToGenerator(filterIterator(self.iterator(), filterFn))
+      filterIterator(self.iterator(), filterFn)
     );
   }
 
   override map<O>(mapFn: (item: T) => O): Observable<O> {
     const self = this;
-    return new DeferredObservable(() =>
-      iteratorToGenerator(mapIterator(self.iterator(), mapFn))
-    );
+    return new DeferredObservable(() => mapIterator(self.iterator(), mapFn));
   }
 
   override flatMap<O>(mapFn: (item: T) => AsyncObservable<O>): Observable<O> {
     const self = this;
     return new DeferredObservable(() =>
-      iteratorToGenerator(flatMapIterator(self.iterator(), mapFn))
+      flatMapIterator(self.iterator(), mapFn)
     );
   }
 
   override merge(other: Observable<T>): Observable<T> {
     return new DeferredObservable(() =>
-      iteratorToGenerator(
-        BufferedIterator.fromIterables(this.iterable(), other.iterable())
-      )
+      BufferedIterator.fromIterables(this.iterable(), other.iterable())
     );
   }
 
   override take(num: number): Observable<T> {
     const self = this;
-    return new DeferredObservable(() =>
-      iteratorToGenerator(takeIterator(self.iterator(), num))
-    );
+    return new DeferredObservable(() => takeIterator(self.iterator(), num));
   }
 
   override async toArray(): Promise<T[]> {

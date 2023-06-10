@@ -1,4 +1,4 @@
-import {
+import iteratorToIterable, {
   asyncFilterIterator,
   asyncMapIterator,
   filterIterator,
@@ -14,9 +14,11 @@ import Observable from "./observable";
 export default class AsyncObservable<T> extends Observable<T> {
   private readonly buffer: BufferedIterator<T>;
 
-  constructor(generatorFn: () => AsyncGenerator<T>) {
-    super(generatorFn);
-    this.buffer = BufferedIterator.fromIterables(generatorFn());
+  constructor(iteratorFn: () => AsyncIterator<T>) {
+    super(iteratorFn);
+    this.buffer = BufferedIterator.fromIterables(
+      iteratorToIterable(iteratorFn)
+    );
   }
 
   /** Iterates over the items in this iterable, draining any previously buffered items */
