@@ -17,6 +17,7 @@ export default abstract class Observable<T> {
 
   abstract iterable(): AsyncIterable<T>;
   abstract iterator(): AsyncIterator<T>;
+  abstract promise(): Promise<T>;
   abstract toArray(): Promise<T[]>;
   abstract map<O>(mapFn: (item: T) => O): Observable<O>;
   abstract flatMap<O>(mapFn: (item: T) => Observable<O>): Observable<O>;

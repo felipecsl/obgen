@@ -31,6 +31,12 @@ export default class DeferredObservable<T> extends Observable<T> {
     return this._iterator;
   }
 
+  override promise(): Promise<T> {
+    return this.iterator()
+      .next()
+      .then((r) => r.value);
+  }
+
   override asyncFilter(filterFn: (item: T) => Promise<boolean>): Observable<T> {
     const self = this;
     return new DeferredObservable(() =>
