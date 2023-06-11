@@ -27,6 +27,12 @@ export default class AsyncObservable<T> extends Observable<T> {
     return buffer;
   }
 
+  override promise(): Promise<T> {
+    return this.iterator()
+      .next()
+      .then((r) => r.value);
+  }
+
   override iterator(): AsyncIterator<T> {
     return this.buffer;
   }
