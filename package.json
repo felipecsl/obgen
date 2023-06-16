@@ -48,7 +48,7 @@
     "prompts": "2.4.2",
     "resolve": "1.22.2",
     "resolve-url-loader": "^5.0.0",
-    "semver": "7.5.1",
+    "semver": "7.5.2",
     "ts-node": "^10.4.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.4",
