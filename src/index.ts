@@ -1,6 +1,7 @@
 import AsyncObservable from "./asyncObservable";
 import BufferedIterator from "./bufferedIterator";
 import DeferredObservable from "./deferredObservable";
+import MulticastIterator from "./multicastIterator";
 import Observable from "./observable";
 import { iteratorToGenerator } from "./internal/util";
 import { Stream } from "./stream";
@@ -118,3 +119,11 @@ export function just<T>(val: T): Observable<T> {
 export function interval(interval: number): Observable<any> {
   return buffer((stream) => setInterval(() => stream.emit(null), interval));
 }
+
+export {
+  Observable,
+  BufferedIterator,
+  MulticastIterator,
+  DeferredObservable,
+  AsyncObservable,
+};
