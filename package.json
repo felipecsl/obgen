@@ -50,7 +50,7 @@
     "semver": "7.7.4",
     "ts-node": "^10.4.0",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.0.4",
+    "typescript": "^6.0.3",
     "url-loader": "4.1.1"
   },
   "author": "Felipe Lima",
